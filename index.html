@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Freedom Calculator</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+html{color-scheme:light}
+
+/* Layout: invoervelden links in uitklapbare secties, resultaten rechts (sticky); op telefoon staan de resultaten bovenaan. */
+:root {
+  --bg: #f2f5f4;
+  --surface: #ffffff;
+  --surface-2: #e9eeec;
+  --ink: #142320;
+  --muted: #55665f;
+  --line: #d3dcd8;
+  --rent: #1b6f93;
+  --buy: #b8531a;
+  --good: #2b7a4b;
+  --bad: #b3372b;
+  --focus: #1b6f93;
+  --f-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --f-body: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1a18; --surface: #17242f; --surface-2: #1d2c29; --ink: #e6eeeb; --muted: #97aaa3; --line: #2b3d38;
+    --rent: #5cb4d8; --buy: #f0955a; --good: #58c184; --bad: #f0806f; --focus: #5cb4d8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1a18; --surface: #17242f; --surface-2: #1d2c29; --ink: #e6eeeb; --muted: #97aaa3; --line: #2b3d38;
+  --rent: #5cb4d8; --buy: #f0955a; --good: #58c184; --bad: #f0806f; --focus: #5cb4d8;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: 20px 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: clamp(1.6rem, 3.2vw, 2.2rem); }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
+.banner { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; color: var(--muted); font-size: 13.5px; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 22px; align-items: start; }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.tb .l { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.tb .v { font-family: var(--f-display); font-weight: 700; font-size: 1.3rem; font-variant-numeric: tabular-nums; line-height: 1.2; border-radius: 4px; }
+.tb .s { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; border-radius: 4px; }
+.tb .s b { color: var(--ink); }
+@keyframes chg { from { background: color-mix(in srgb, var(--focus) 35%, transparent); } to { background: transparent; } }
+.chg { animation: chg 1s ease-out; }
+@media (prefers-reduced-motion: reduce) { .chg { animation: none; } }
+@media (max-width: 560px) { .topbar { padding: 8px 10px; gap: 8px; } .tb .v { font-size: 1rem; } .tb .l, .tb .s { font-size: 11px; } }
+.results { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); max-height: calc(100vh - 110px); overflow-y: auto; padding: 4px 4px 24px 0; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 1000px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .results { position: static; max-height: none; overflow: visible; order: -1; padding: 0; }
+}
+.inputs { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+details.sec { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+details.sec > summary { cursor: pointer; list-style: none; padding: 13px 16px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; }
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary::after { content: '+'; color: var(--muted); font-weight: 500; }
+details.sec[open] > summary::after { content: '–'; }
+details.sec > summary:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sec-body { padding: 2px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.sec-note { color: var(--muted); font-size: 13px; margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px 14px; }
+.fld { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.fld label { font-size: 13px; font-weight: 500; }
+.fld small { color: var(--muted); font-size: 12px; line-height: 1.3; }
+.inp { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); min-width: 0; }
+.inp:focus-within { border-color: var(--focus); }
+.inp input, .inp select { flex: 1; min-width: 0; width: 100%; border: 0; background: transparent; color: var(--ink); font: inherit; padding: 7px 9px; font-variant-numeric: tabular-nums; border-radius: 5px; }
+.inp input:focus-visible { outline: none; }
+.inp .u { display: flex; align-items: center; padding: 0 9px; color: var(--muted); font-size: 12.5px; border-left: 1px solid var(--line); white-space: nowrap; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; font-weight: 500; }
+.chk input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--rent); }
+.tblwrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); font-size: 13.5px; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+tr.tot td { font-weight: 700; border-top: 2px solid var(--ink); }
+tr.sub td { color: var(--muted); }
+.rows input { width: 100%; min-width: 74px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; padding: 5px 7px; border-radius: 4px; text-align: right; font-variant-numeric: tabular-nums; }
+.rows input.nm { text-align: left; min-width: 190px; }
+button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 5px; padding: 6px 12px; }
+button:hover { background: var(--surface-2); }
+button.x { padding: 3px 8px; color: var(--muted); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.kpi .l { color: var(--muted); font-size: 12.5px; }
+.kpi .v { font-family: var(--f-display); font-weight: 700; font-size: 1.55rem; font-variant-numeric: tabular-nums; }
+.scens { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.scen { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.scen h3 { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; }
+.sw { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+.sw.rent { background: var(--rent); }
+.sw.buy { background: var(--buy); }
+.dur { font-family: var(--f-display); font-weight: 700; font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.dur small { font-size: 0.95rem; font-weight: 500; color: var(--muted); display: block; font-family: var(--f-body); margin-top: 2px; }
+dl { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; margin: 0; font-size: 13.5px; }
+dl dt { color: var(--muted); }
+dl dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card h3 { font-size: 1rem; }
+.warn { border-left: 3px solid var(--bad); padding: 6px 10px; background: var(--surface-2); font-size: 13px; border-radius: 0 4px 4px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chartbox { position: relative; }
+.chartbox svg { width: 100%; height: auto; display: block; }
+.ax { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
+.gridl { stroke: var(--line); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 12.5px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; z-index: 3; }
+.tip b { display: block; margin-bottom: 3px; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+textarea { width: 100%; min-height: 84px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 8px; }
+.foot { color: var(--muted); font-size: 12.5px; max-width: 90ch; }
+@media (prefers-reduced-motion: no-preference) { details.sec { transition: border-color .15s; } }
+</style>
+
+</head><body>
+<div class="wrap">
+  <header>
+    <h1>Freedom Calculator</h1>
+    <p class="sub">Hoelang halen jullie met de huisopbrengst, met een camper en zes maanden per jaar op tour? Vergelijk huren en kopen op basis van jullie eigen cijfers.</p>
+  </header>
+  <div class="banner">Alle ingevulde bedragen zijn voorbeeldwaarden. Pas ze aan naar jullie situatie. Jullie invoer wordt automatisch bewaard in deze browser.</div>
+  <div class="topbar" id="topbar" aria-live="polite"></div>
+  <div class="app">
+    <div class="inputs" id="inputs"></div>
+    <aside class="results" id="results" aria-live="polite"></aside>
+  </div>
+  <p class="foot">Berekening: maandelijkse simulatie. Kosten stijgen jaarlijks met de gekozen inflatie (huur met de huurindexering), het saldo groeit met de netto spaarrente, en de roerende voorheffing wordt jaarlijks afgetrokken op rente boven de vrijstelling. Aankoopkosten, tarieven en attestkosten zijn richtwaarden. Dit is een planningshulp, geen fiscaal of financieel advies.</p>
+</div>
+
+<script>
+/* ---------- Invoervelden ---------- */
+const SECTIONS = [
+  { id: 'sale', title: 'Huisverkoop', open: true, note: 'Netto opbrengst = verkoopprijs min hypotheek, commissie en verkoopkosten.', fields: [
+    { k: 'sell_price', l: 'Verkoopprijs huis', u: '€', d: 350000, s: 5000 },
+    { k: 'mortgage', l: 'Openstaand hypotheeksaldo', u: '€', d: 0, s: 1000 },
+    { k: 'agent_pct', l: 'Commissie immokantoor (excl. btw)', u: '%', d: 3, s: 0.1 },
+    { k: 'agent_vat', l: 'Btw op commissie', u: '%', d: 21, s: 1 },
+    { k: 'notary_sell', l: 'Notaris en akte verkoper', u: '€', d: 1000, s: 100, h: 'Inclusief doorhaling hypotheek, indien van toepassing.' },
+    { k: 'wederbeleg', l: 'Wederbeleggingsvergoeding bank', u: '€', d: 0, s: 100, h: 'Enkel bij vervroegde aflossing; vaak maximaal 3 maanden rente.' },
+    { k: 'epc', l: 'EPC-attest', u: '€', d: 250, s: 10 },
+    { k: 'elec', l: 'Elektriciteitskeuring', u: '€', d: 150, s: 10 },
+    { k: 'asbest', l: 'Asbestattest (indien nodig)', u: '€', d: 250, s: 10 },
+    { k: 'bodem', l: 'Bodemattest', u: '€', d: 60, s: 10 },
+    { k: 'stedenb', l: 'Stedenbouwkundige inlichtingen', u: '€', d: 150, s: 10 },
+    { k: 'opkuis', l: 'Opkuis, herstellingen, homestaging', u: '€', d: 1000, s: 100 },
+    { k: 'sell_other', l: 'Overige verkoopkosten', u: '€', d: 500, s: 100 },
+    { k: 'meerwaarde', l: 'Belasting op meerwaarde', u: '€', d: 0, s: 100, h: 'Eigen woning is doorgaans vrijgesteld. Laat dit nakijken door de notaris.' },
+  ]},
+  { id: 'extra', title: 'Extra kapitaal, crypto en eenmalige kosten', open: false, note: 'De crypto-kant kunnen jullie later invullen. Zet het vinkje aan om het mee te rekenen.', fields: [
+    { k: 'other_savings', l: 'Bestaand spaargeld en ander kapitaal', u: '€', d: 0, s: 1000 },
+    { k: 'crypto_on', l: 'Crypto meerekenen in het startkapitaal', t: 'check', d: false },
+    { k: 'crypto_value', l: 'Waarde crypto nu', u: '€', d: 0, s: 500 },
+    { k: 'crypto_haircut', l: 'Voorzichtigheidsafslag op crypto', u: '%', d: 30, s: 5, h: 'Houdt rekening met koersschommelingen en verkoopkosten.' },
+    { k: 'oneoff_move', l: 'Verhuiskosten', u: '€', d: 2500, s: 100 },
+    { k: 'oneoff_furn', l: 'Inrichting, meubels, toestellen', u: '€', d: 3000, s: 100 },
+    { k: 'oneoff_other', l: 'Overige eenmalige kosten', u: '€', d: 0, s: 100 },
+  ]},
+  { id: 'camper', title: 'Camper en reizen', open: false, note: 'Bedragen per jaar, per maand of per maand onderweg, zoals bij elk veld staat.', fields: [
+    { k: 'travel_months', l: 'Maanden onderweg per jaar', u: 'mnd', d: 6, s: 0.5 },
+    { k: 'camper_debt', l: 'Openstaande afbetaling camper', u: '€', d: 30000, s: 1000 },
+    { k: 'camper_pay', l: 'Maandelijkse afbetaling', u: '€/mnd', d: 450, s: 10 },
+    { k: 'camper_months', l: 'Resterende looptijd', u: 'mnd', d: 60, s: 1 },
+    { k: 'camper_payoff', l: 'Camper meteen aflossen met de huisopbrengst', t: 'check', d: false },
+    { k: 'camper_ins', l: 'Verzekering', u: '€/jaar', d: 900, s: 10 },
+    { k: 'camper_tax', l: 'Verkeersbelasting', u: '€/jaar', d: 300, s: 10 },
+    { k: 'camper_keuring', l: 'Technische keuring', u: '€/jaar', d: 60, s: 5 },
+    { k: 'camper_maint', l: 'Onderhoud en banden', u: '€/jaar', d: 1200, s: 50 },
+    { k: 'camper_reserve', l: 'Reserve grote herstellingen', u: '€/jaar', d: 1000, s: 50 },
+    { k: 'camper_stal', l: 'Stalling, per maand dat de camper niet onderweg is', u: '€/mnd', d: 60, s: 5 },
+    { k: 'camper_km', l: 'Kilometers per jaar', u: 'km', d: 12000, s: 500 },
+    { k: 'camper_l100', l: 'Verbruik', u: 'l/100km', d: 12, s: 0.5 },
+    { k: 'fuel_price', l: 'Brandstofprijs', u: '€/l', d: 1.85, s: 0.05 },
+    { k: 'camp_price', l: 'Prijs per betaalde overnachting', u: '€', d: 25, s: 1 },
+    { k: 'camp_nights', l: 'Betaalde overnachtingen per maand onderweg', u: 'nachten', d: 18, s: 1 },
+    { k: 'toll', l: 'Tol, vignetten, ferries', u: '€/jaar', d: 600, s: 50 },
+    { k: 'travel_ins', l: 'Reis- en pechbijstand', u: '€/jaar', d: 350, s: 10 },
+    { k: 'travel_misc', l: 'Gas, wasserette, diversen per maand onderweg', u: '€/mnd', d: 80, s: 5 },
+    { k: 'travel_food', l: 'Meerkost eten en uitstapjes per maand onderweg', u: '€/mnd', d: 150, s: 10 },
+  ]},
+  { id: 'home', title: 'Wonen: kosten in beide scenario\'s', open: false, fields: [
+    { k: 'energy', l: 'Energie (stroom, gas)', u: '€/mnd', d: 140, s: 5 },
+    { k: 'water', l: 'Water', u: '€/mnd', d: 30, s: 5 },
+    { k: 'internet', l: 'Internet en tv', u: '€/mnd', d: 50, s: 5 },
+    { k: 'home_tax', l: 'Gemeentetaksen en afval', u: '€/mnd', d: 15, s: 5 },
+    { k: 'away_red', l: 'Daling energie en water tijdens de reizen', u: '%', d: 40, s: 5, h: 'Wordt toegepast op het aandeel maanden onderweg.' },
+  ]},
+  { id: 'rent', title: 'Scenario huren', open: false, fields: [
+    { k: 'rent', l: 'Kale huur', u: '€/mnd', d: 950, s: 10 },
+    { k: 'charges', l: 'Gemeenschappelijke kosten en voorschotten', u: '€/mnd', d: 60, s: 5 },
+    { k: 'rent_ins', l: 'Huurdersverzekering', u: '€/mnd', d: 20, s: 1 },
+    { k: 'deposit_months', l: 'Huurwaarborg', u: 'mnd huur', d: 2, s: 1, h: 'Wordt van het startkapitaal afgetrokken en niet teruggerekend.' },
+  ]},
+  { id: 'buy', title: 'Scenario kopen (appartement)', open: false, note: 'Aankoop met de huisopbrengst, optioneel aangevuld met een lening.', fields: [
+    { k: 'buy_price', l: 'Aankoopprijs (maximum 250.000)', u: '€', d: 250000, s: 5000 },
+    { k: 'reg_pct', l: 'Registratierechten', u: '%', d: 12, s: 0.5, h: 'Vlaanderen 12% standaard, 2% enkel onder strenge voorwaarden. Brussel en Wallonië 12,5%. Vraag na bij de notaris.' },
+    { k: 'notary_buy', l: 'Notaris, akte en attesten', u: '€', d: 3500, s: 100 },
+    { k: 'other_buy', l: 'Overige aankoopkosten', u: '€', d: 500, s: 100 },
+    { k: 'loan_amount', l: 'Lening (optioneel)', u: '€', d: 0, s: 5000 },
+    { k: 'loan_rate', l: 'Rentevoet lening', u: '%', d: 3.5, s: 0.1 },
+    { k: 'loan_years', l: 'Looptijd lening', u: 'jaar', d: 20, s: 1 },
+    { k: 'prop_tax', l: 'Onroerende voorheffing', u: '€/jaar', d: 800, s: 25 },
+    { k: 'syndic', l: 'Syndic en gemeenschappelijke kosten', u: '€/mnd', d: 130, s: 5 },
+    { k: 'fire_ins', l: 'Brandverzekering', u: '€/mnd', d: 25, s: 1 },
+    { k: 'maint_pct', l: 'Onderhoudsreserve', u: '% prijs/jaar', d: 0.5, s: 0.1 },
+    { k: 'growth', l: 'Waardestijging appartement per jaar', u: '%', d: 2, s: 0.1, h: 'Telt enkel mee in het totale vermogen, niet in het spaargeld.' },
+  ]},
+  { id: 'living', title: 'Levensonderhoud', open: true, custom: 'living' },
+  { id: 'income', title: 'Inkomsten (netto per maand)', open: false, note: 'Laat op 0 staan om enkel het kapitaal aan te spreken. Bijvoorbeeld pensioen, deeltijds werk of huurinkomsten.', fields: [
+    { k: 'inc_b', l: 'Inkomen persoon 1', u: '€/mnd', d: 0, s: 50 },
+    { k: 'inc_p', l: 'Inkomen persoon 2', u: '€/mnd', d: 0, s: 50 },
+    { k: 'inc_g', l: 'Gezamenlijk of overig inkomen', u: '€/mnd', d: 0, s: 50 },
+    { k: 'inc_index', l: 'Inkomen jaarlijks indexeren met inflatie', t: 'check', d: true },
+    { k: 'tmp_amount', l: 'Tijdelijk inkomen, bedrag', u: '€/mnd', d: 0, s: 50, h: 'Bijvoorbeeld een uitkering of afbouwinkomen. Zet op 0 om het uit te schakelen.' },
+    { k: 'tmp_years', l: 'Tijdelijk inkomen, duur', u: 'jaar', d: 2, s: 0.5, h: 'Het inkomen start bij de verkoop en stopt na dit aantal jaar.' },
+    { k: 'tmp_dec', l: 'Tijdelijk inkomen, daling per jaar', u: '%', d: 5, s: 1, h: 'Elk jaar wordt het bedrag zoveel procent lager. Bij 500 euro en 5%: jaar 1 is 500, jaar 2 is 475.' },
+    { k: 'contingency', l: 'Onvoorzien, opslag op alle kosten', u: '%', d: 5, s: 1 },
+  ]},
+  { id: 'macro', title: 'Economische aannames', open: false, note: 'Rendement en inflatie bepalen hoe snel het kapitaal slinkt.', fields: [
+    { k: 'infl_basis', l: 'Inflatie voor de kosten', t: 'select', d: 'ez', opts: [['ez', 'Inflatie eurozone'], ['cpi', 'Consumentenprijsindex (CPI)'], ['custom', 'Eigen percentage']] },
+    { k: 'infl_ez', l: 'Inflatie eurozone', u: '%', d: 3.2, s: 0.1 },
+    { k: 'infl_cpi', l: 'Consumentenprijsindex (CPI)', u: '%', d: 2.5, s: 0.1 },
+    { k: 'infl_custom', l: 'Eigen inflatiepercentage', u: '%', d: 3, s: 0.1 },
+    { k: 'huurindex', l: 'Huurindexering per jaar', u: '%', d: 3.4, s: 0.1, h: 'Gezondheidsindex augustus 2026 tegenover augustus 2025.' },
+    { k: 'sav_base', l: 'Basisrente spaarrekening', u: '%', d: 0.15, s: 0.05, h: 'Belfius Fidelity Spaarrekening.' },
+    { k: 'sav_bonus', l: 'Getrouwheidspremie', u: '%', d: 1.5, s: 0.05 },
+    { k: 'wht', l: 'Roerende voorheffing', u: '%', d: 15, s: 1 },
+    { k: 'exempt', l: 'Vrijgestelde rente per jaar (samen)', u: '€', d: 2040, s: 10, h: 'Rente onder dit bedrag is vrijgesteld.' },
+    { k: 'horizon', l: 'Maximale horizon van de berekening', u: 'jaar', d: 60, s: 5 },
+  ]},
+];
+const DEFAULT_ROWS = [
+  ['Voeding en huishoudproducten', 0, 0, 600], ['Restaurant, café, uitstappen', 0, 0, 150],
+  ['Ziekenfonds en hospitalisatie', 60, 60, 0], ['Apotheek, tandarts, dokter', 40, 40, 0],
+  ['Gsm en abonnementen', 25, 25, 25], ['Kleding en verzorging', 60, 80, 0],
+  ['Hobby en persoonlijk', 50, 50, 0], ['Verzekeringen (familiale, rechtsbijstand)', 0, 0, 40],
+  ['Cadeaus en familie', 0, 0, 50], ['Openbaar vervoer, taxi, huurauto', 20, 20, 30],
+  ['Belastingen (personenbelasting e.d.)', 0, 0, 0], ['Vakanties buiten de camper', 0, 0, 100],
+].map(r => ({ n: r[0], b: r[1], p: r[2], g: r[3] }));
+
+function defaults() {
+  const S = { name_b: 'Bart', name_p: 'Partner', rows: DEFAULT_ROWS.map(r => ({ ...r })) };
+  SECTIONS.forEach(sec => (sec.fields || []).forEach(f => { S[f.k] = f.d; }));
+  return S;
+}
+
+/* ---------- Rekenmodel (zuiver) ---------- */
+//<calc>
+function calc(S) {
+  const n = k => Number(S[k]) || 0;
+  const infl = (S.infl_basis === 'cpi' ? n('infl_cpi') : S.infl_basis === 'custom' ? n('infl_custom') : n('infl_ez')) / 100;
+  const hidx = n('huurindex') / 100;
+  const sav = (n('sav_base') + n('sav_bonus')) / 100;
+  const mRate = Math.pow(1 + sav, 1 / 12) - 1;
+  const hz = Math.max(1, Math.round(n('horizon') || 60));
+  const T = Math.min(12, Math.max(0, n('travel_months')));
+  const tf = T / 12;
+
+  // Verkoop
+  const agent = n('sell_price') * n('agent_pct') / 100 * (1 + n('agent_vat') / 100);
+  const sellFees = n('notary_sell') + n('wederbeleg') + n('epc') + n('elec') + n('asbest') + n('bodem') + n('stedenb') + n('opkuis') + n('sell_other') + n('meerwaarde');
+  const netSale = n('sell_price') - n('mortgage') - agent - sellFees;
+  const crypto = S.crypto_on ? n('crypto_value') * (1 - n('crypto_haircut') / 100) : 0;
+  const oneoff = n('oneoff_move') + n('oneoff_furn') + n('oneoff_other');
+  const camperPayoff = S.camper_payoff ? n('camper_debt') : 0;
+
+  const rowSum = { b: 0, p: 0, g: 0 };
+  (S.rows || []).forEach(r => { rowSum.b += Number(r.b) || 0; rowSum.p += Number(r.p) || 0; rowSum.g += Number(r.g) || 0; });
+
+  // Camper (per maand, prijzen jaar 0)
+  const camperAnnual = n('camper_ins') + n('camper_tax') + n('camper_keuring') + n('camper_maint') + n('camper_reserve')
+    + n('camper_stal') * (12 - T) + n('camper_km') * n('camper_l100') / 100 * n('fuel_price')
+    + n('camp_price') * n('camp_nights') * T + n('toll') + n('travel_ins') + (n('travel_misc') + n('travel_food')) * T;
+  const camperMonthly = camperAnnual / 12;
+
+  // Lening koop
+  const L = n('loan_amount'), lr = n('loan_rate') / 1200, ln = Math.round(n('loan_years') * 12);
+  const loanPay = L > 0 && ln > 0 ? (lr === 0 ? L / ln : L * lr / (1 - Math.pow(1 + lr, -ln))) : 0;
+  const loanBal = m => {
+    if (!(L > 0) || m >= ln) return 0;
+    if (lr === 0) return L - loanPay * m;
+    return Math.max(0, L * Math.pow(1 + lr, m) - loanPay * (Math.pow(1 + lr, m) - 1) / lr);
+  };
+
+  const commonHome = (n('energy') + n('water')) * (1 - n('away_red') / 100 * tf) + n('internet') + n('home_tax');
+  const buyCost = n('buy_price') * (1 + n('reg_pct') / 100) + n('notary_buy') + n('other_buy');
+
+  function comp(m, sc) {
+    const y = Math.floor(m / 12);
+    const fi = Math.pow(1 + infl, y), fr = Math.pow(1 + hidx, y);
+    const living = (rowSum.b + rowSum.p + rowSum.g) * fi;
+    let housing = commonHome * fi;
+    if (sc === 'rent') housing += n('rent') * fr + (n('charges') + n('rent_ins')) * fi;
+    else housing += (n('prop_tax') / 12 + n('syndic') + n('fire_ins') + n('maint_pct') / 100 * n('buy_price') / 12) * fi;
+    const camper = camperMonthly * fi;
+    const cont = (living + housing + camper) * n('contingency') / 100;
+    const camperLoan = (!S.camper_payoff && m < n('camper_months')) ? n('camper_pay') : 0;
+    const homeLoan = (sc === 'buy' && m < ln) ? loanPay : 0;
+    const tmp = m < Math.round(n('tmp_years') * 12) ? n('tmp_amount') * Math.pow(1 - n('tmp_dec') / 100, y) : 0;
+    const income = (n('inc_b') + n('inc_p') + n('inc_g')) * (S.inc_index ? fi : 1) + tmp;
+    const total = living + housing + camper + cont + camperLoan + homeLoan;
+    return { living, housing, camper, cont, camperLoan, homeLoan, loans: camperLoan + homeLoan, income, total, net: total - income };
+  }
+
+  function run(sc) {
+    const start = netSale + n('other_savings') + crypto - oneoff - camperPayoff
+      - (sc === 'rent' ? n('rent') * n('deposit_months') : buyCost - L);
+    const g = n('growth') / 100;
+    const prop = y => sc === 'buy' ? n('buy_price') * Math.pow(1 + g, y) : 0;
+    const liq = [Math.max(0, start)], wealth = [start + prop(0) - (sc === 'buy' ? L : 0)];
+    let bal = start, runout = start <= 0 ? 0 : null, yInt = 0, int1 = 0, tax1 = 0;
+    if (runout === null) {
+      for (let m = 0; m < hz * 12; m++) {
+        const c = comp(m, sc);
+        const interest = bal > 0 ? bal * mRate : 0;
+        const before = bal + interest;
+        bal = before - c.net;
+        yInt += interest;
+        if (m < 12) int1 += interest;
+        if (bal < 0 && c.net > 0) { runout = m + Math.max(0, before) / c.net; break; }
+        if (m % 12 === 11) {
+          const tax = Math.max(0, yInt - n('exempt')) * n('wht') / 100;
+          if (m < 12) tax1 = tax;
+          bal -= tax; yInt = 0;
+          if (bal < 0) { runout = m + 1; break; }
+          const y = (m + 1) / 12;
+          liq.push(bal);
+          wealth.push(bal + prop(y) - loanBal(m + 1));
+        }
+      }
+    }
+    while (liq.length <= hz) { liq.push(0); wealth.push(sc === 'buy' ? prop(liq.length - 1) - loanBal((liq.length - 1) * 12) : 0); }
+    return { start, liq, wealth, runout, c0: comp(0, sc), int1, tax1 };
+  }
+
+  return { rent: run('rent'), buy: run('buy'), netSale, agent, sellFees, crypto, oneoff, camperPayoff, buyCost, L,
+    deposit: n('rent') * n('deposit_months'), rowSum, infl, hz, loanPay, other: n('other_savings') };
+}
+//</calc>
+
+/* ---------- Opmaak ---------- */
+const eur = x => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(x));
+const num = x => new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 1 }).format(x);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function dur(run, hz) {
+  if (run === null) return { big: hz + '+ jaar', small: 'kapitaal gaat binnen de horizon niet op' };
+  const m = Math.floor(run), y = Math.floor(m / 12), r = m % 12;
+  const big = y > 0 ? y + ' jaar' + (r ? ' ' + r + ' mnd' : '') : r + ' mnd';
+  return { big, small: 'tot het kapitaal op is' };
+}
+
+let S = defaults();
+const KEY = 'freedom-calculator-v1';
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) applyState(JSON.parse(raw));
+  } catch (e) {}
+}
+function applyState(o) {
+  const d = defaults();
+  Object.keys(d).forEach(k => { if (k !== 'rows' && o[k] !== undefined) d[k] = o[k]; });
+  if (Array.isArray(o.rows)) d.rows = o.rows.map(r => ({ n: String(r.n || ''), b: +r.b || 0, p: +r.p || 0, g: +r.g || 0 }));
+  S = d;
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+function fieldHTML(f) {
+  const id = 'f_' + f.k;
+  if (f.t === 'check') return `<div class="fld"><label class="chk" for="${id}"><input type="checkbox" id="${id}" data-k="${f.k}" ${S[f.k] ? 'checked' : ''}><span>${esc(f.l)}</span></label>${f.h ? `<small>${esc(f.h)}</small>` : ''}</div>`;
+  if (f.t === 'select') return `<div class="fld"><label for="${id}">${esc(f.l)}</label><div class="inp"><select id="${id}" data-k="${f.k}">${f.opts.map(o => `<option value="${o[0]}" ${S[f.k] === o[0] ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></div></div>`;
+  return `<div class="fld"><label for="${id}">${esc(f.l)}</label><div class="inp"><input type="number" inputmode="decimal" id="${id}" data-k="${f.k}" step="${f.s || 1}" min="0" value="${S[f.k]}"><span class="u">${esc(f.u || '')}</span></div>${f.h ? `<small>${esc(f.h)}</small>` : ''}</div>`;
+}
+function livingHTML() {
+  const head = `<div class="grid"><div class="fld"><label for="name_b">Naam persoon 1</label><div class="inp"><input type="text" id="name_b" data-k="name_b" value="${esc(S.name_b)}"></div></div><div class="fld"><label for="name_p">Naam persoon 2</label><div class="inp"><input type="text" id="name_p" data-k="name_p" value="${esc(S.name_p)}"></div></div></div>`;
+  const rows = S.rows.map((r, i) => `<tr><td><input class="nm" type="text" data-row="${i}" data-col="n" aria-label="Omschrijving rij ${i + 1}" value="${esc(r.n)}"></td>`
+    + ['b', 'p', 'g'].map(c => `<td><input type="number" inputmode="decimal" min="0" step="5" data-row="${i}" data-col="${c}" aria-label="${c === 'g' ? 'Gezamenlijk' : c === 'b' ? esc(S.name_b) : esc(S.name_p)}, ${esc(r.n)}" value="${r[c]}"></td>`).join('')
+    + `<td><button class="x" data-del="${i}" aria-label="Rij verwijderen">✕</button></td></tr>`).join('');
+  return `<p class="sec-note">Bedragen per maand, voor het hele jaar (ook onderweg). Kosten specifiek voor de camper staan onder Camper en reizen.</p>${head}
+  <div class="tblwrap rows"><table><thead><tr><th>Post</th><th id="th_b">${esc(S.name_b)}</th><th id="th_p">${esc(S.name_p)}</th><th>Gezamenlijk</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="tot"><td>Totaal per maand</td><td id="sum_b"></td><td id="sum_p"></td><td id="sum_g"></td><td></td></tr></tfoot></table></div>
+  <div class="btns"><button id="addrow">Rij toevoegen</button></div>`;
+}
+function renderInputs() {
+  const html = SECTIONS.map(sec => `<details class="sec" id="sec_${sec.id}" ${sec.open ? 'open' : ''}><summary>${esc(sec.title)}</summary><div class="sec-body">`
+    + (sec.custom === 'living' ? livingHTML() : (sec.note ? `<p class="sec-note">${esc(sec.note)}</p>` : '') + `<div class="grid">${sec.fields.map(fieldHTML).join('')}</div>`)
+    + `</div></details>`).join('')
+    + `<details class="sec"><summary>Instellingen bewaren of overzetten</summary><div class="sec-body"><p class="sec-note">Kopieer de tekst hieronder om jullie invoer te bewaren of naar een ander toestel te brengen. Plak een eerder bewaarde tekst en kies Laden.</p><textarea id="io" aria-label="Instellingen als tekst"></textarea><div class="btns"><button id="io_copy">Kopieer instellingen</button><button id="io_load">Laden</button><button id="io_reset">Terug naar voorbeeldwaarden</button></div><small id="io_msg" class="sec-note"></small></div></details>`;
+  document.getElementById('inputs').innerHTML = html;
+  document.getElementById('io').value = JSON.stringify(S);
+}
+
+function onFieldInput(e) {
+  const t = e.target;
+  if (t.dataset.k) {
+    const k = t.dataset.k;
+    if (t.type === 'checkbox') S[k] = t.checked;
+    else if (t.tagName === 'SELECT' || t.type === 'text') S[k] = t.value;
+    else S[k] = t.value === '' ? 0 : parseFloat(t.value);
+    if (k === 'name_b' || k === 'name_p') { document.getElementById('th_b').textContent = S.name_b; document.getElementById('th_p').textContent = S.name_p; }
+  } else if (t.dataset.row !== undefined) {
+    const r = S.rows[+t.dataset.row], c = t.dataset.col;
+    r[c] = c === 'n' ? t.value : (t.value === '' ? 0 : parseFloat(t.value));
+  } else return;
+  update();
+}
+
+function update() { save(); renderResults(); const io = document.getElementById('io'); if (io && document.activeElement !== io) io.value = JSON.stringify(S); }
+
+/* ---------- Resultaten ---------- */
+let LAST = null;
+function renderResults() {
+  const R = calc(S); LAST = R;
+  ['b', 'p', 'g'].forEach(c => { const el = document.getElementById('sum_' + c); if (el) el.textContent = eur(R.rowSum[c]); });
+  const rc = R.rent.c0, bc = R.buy.c0;
+  const dr = dur(R.rent.runout, R.hz), db = dur(R.buy.runout, R.hz);
+  const warns = [];
+  if (Number(S.buy_price) > 250000) warns.push('De aankoopprijs ligt boven jullie maximum van 250.000 euro.');
+  if (R.buy.start < 0) warns.push('Bij kopen is het kapitaal niet voldoende voor de aankoop en de kosten. Verhoog de lening of verlaag de prijs.');
+  if (R.rent.start < 0) warns.push('Bij huren is het startkapitaal negatief. Controleer de verkoopgegevens.');
+
+  const scen = (cls, name, R_, c, d, extra) => `<article class="scen"><h3><span class="sw ${cls}"></span>${name}</h3>
+    <div class="dur">${d.big}<small>${d.small}</small></div>
+    <dl><dt>Startkapitaal</dt><dd>${eur(R_.start)}</dd>
+    <dt>Kost per maand (jaar 1)</dt><dd>${eur(c.total)}</dd>
+    <dt>Kost per jaar (jaar 1)</dt><dd>${eur(c.total * 12)}</dd>
+    <dt>Netto uit kapitaal per maand</dt><dd>${eur(c.net)}</dd>
+    <dt>Netto rente jaar 1</dt><dd>${eur(R_.int1 - R_.tax1)}</dd>${extra}</dl></article>`;
+  const wealth20 = R.buy.wealth[Math.min(20, R.hz)];
+  const buyExtra = `<dt>Vermogen incl. appartement na ${Math.min(20, R.hz)} jaar</dt><dd>${eur(wealth20)}</dd>`;
+  const rentExtra = `<dt>Huurwaarborg (vast)</dt><dd>${eur(R.deposit)}</dd>`;
+
+  const line = (l, a, b, cls) => `<tr class="${cls || ''}"><td>${l}</td><td>${eur(a)}</td><td>${eur(b)}</td></tr>`;
+  const person = (nm, val, val2) => `<tr><td>${esc(nm)}</td><td>${eur(val)}</td><td>${eur(val2)}</td></tr>`;
+  const gRent = rc.total - R.rowSum.b - R.rowSum.p, gBuy = bc.total - R.rowSum.b - R.rowSum.p;
+
+  const startTbl = `<div class="tblwrap"><table><thead><tr><th>Opbouw startkapitaal</th><th>Huren</th><th>Kopen</th></tr></thead><tbody>
+    ${line('Verkoopprijs huis', +S.sell_price || 0, +S.sell_price || 0)}
+    ${line('Hypotheek, commissie en verkoopkosten', -(R.agent + R.sellFees + (+S.mortgage || 0)), -(R.agent + R.sellFees + (+S.mortgage || 0)))}
+    ${line('Bestaand kapitaal en crypto', R.other + R.crypto, R.other + R.crypto)}
+    ${line('Verhuis en inrichting', -R.oneoff, -R.oneoff)}
+    ${line('Camper aflossen', -R.camperPayoff, -R.camperPayoff)}
+    ${line('Huurwaarborg', -R.deposit, 0)}
+    ${line('Aankoop incl. kosten, min lening', 0, -(R.buyCost - R.L))}
+    ${line('Startkapitaal', R.rent.start, R.buy.start, 'tot')}
+    </tbody></table></div>`;
+
+  const tb = document.getElementById('topbar');
+  const prev = [...tb.querySelectorAll('.v, .s')].map(e => e.textContent);
+  tb.innerHTML = `
+    <div class="tb"><div class="l">Netto huisopbrengst</div><div class="v">${eur(R.netSale)}</div><div class="s">start: <b>${eur(R.rent.start)}</b> huren, <b>${eur(R.buy.start)}</b> kopen</div></div>
+    <div class="tb"><div class="l"><span class="sw rent"></span>Huren</div><div class="v">${eur(rc.total)} <span class="s">/mnd</span></div><div class="s">${eur(rc.total * 12)}/jaar, <b>${dr.big}</b></div></div>
+    <div class="tb"><div class="l"><span class="sw buy"></span>Kopen</div><div class="v">${eur(bc.total)} <span class="s">/mnd</span></div><div class="s">${eur(bc.total * 12)}/jaar, <b>${db.big}</b></div></div>`;
+  [...tb.querySelectorAll('.v, .s')].forEach((e, i) => { if (prev.length && prev[i] !== e.textContent) e.classList.add('chg'); });
+  document.getElementById('results').innerHTML = `
+    ${warns.map(w => `<div class="warn">${esc(w)}</div>`).join('')}
+    <div class="scens">${scen('rent', 'Huren', R.rent, rc, dr, rentExtra)}${scen('buy', 'Kopen', R.buy, bc, db, buyExtra)}</div>
+    <div class="card"><h3>Kapitaalverloop</h3>
+      <div class="legend"><span><i class="sw rent"></i>Spaargeld, huren</span><span><i class="sw buy"></i>Spaargeld, kopen</span><span><svg width="18" height="4" aria-hidden="true"><line x1="0" y1="2" x2="18" y2="2" stroke="var(--buy)" stroke-width="2" stroke-dasharray="4 3"/></svg>Vermogen incl. appartement, kopen</span></div>
+      <div class="chartbox" id="chartbox"></div>
+      <div class="tblwrap" id="yeartbl"></div>
+    </div>
+    <div class="card"><h3>Maandelijkse kosten in jaar 1</h3><div class="tblwrap"><table><thead><tr><th>Post</th><th>Huren</th><th>Kopen</th></tr></thead><tbody>
+      ${line('Levensonderhoud', rc.living, bc.living)}
+      ${line('Wonen', rc.housing, bc.housing)}
+      ${line('Camper en reizen', rc.camper, bc.camper)}
+      ${line('Onvoorzien', rc.cont, bc.cont)}
+      ${line('Leningen (camper, woning)', rc.loans, bc.loans)}
+      ${line('Totaal per maand', rc.total, bc.total, 'tot')}
+      ${line('Totaal per jaar', rc.total * 12, bc.total * 12, 'tot')}
+      ${line('Inkomsten', -rc.income, -bc.income, 'sub')}
+      ${line('Netto uit kapitaal per maand', rc.net, bc.net, 'tot')}
+    </tbody></table></div></div>
+    <div class="card"><h3>Verdeling per persoon, per maand</h3><div class="tblwrap"><table><thead><tr><th></th><th>Huren</th><th>Kopen</th></tr></thead><tbody>
+      ${person(S.name_b + ' (persoonlijk)', R.rowSum.b, R.rowSum.b)}
+      ${person(S.name_p + ' (persoonlijk)', R.rowSum.p, R.rowSum.p)}
+      ${person('Gezamenlijk (levensonderhoud, wonen, camper, leningen)', gRent, gBuy)}
+    </tbody></table></div></div>
+    <div class="card">${startTbl}</div>`;
+  drawChart(R);
+}
+
+/* ---------- Grafiek ---------- */
+function niceMax(v) {
+  if (v <= 0) return 1000;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+const compact = v => v >= 1e6 ? num(v / 1e6) + ' mln' : v >= 1000 ? Math.round(v / 1000) + 'k' : String(Math.round(v));
+function drawChart(R) {
+  const runs = [R.rent.runout, R.buy.runout];
+  const finite = runs.filter(r => r !== null);
+  const xmax = finite.length === 2 ? Math.max(10, Math.ceil(Math.max(...finite) / 12) + 2) : Math.min(R.hz, 40);
+  const X = Math.min(xmax, R.hz);
+  const W = 680, H = 300, ml = 52, mr = 14, mt = 12, mb = 30;
+  const series = [
+    { k: 'rent', name: 'Spaargeld, huren', color: 'var(--rent)', data: R.rent.liq, dash: '' },
+    { k: 'buy', name: 'Spaargeld, kopen', color: 'var(--buy)', data: R.buy.liq, dash: '' },
+    { k: 'buyw', name: 'Vermogen incl. appartement', color: 'var(--buy)', data: R.buy.wealth, dash: '5 4' },
+  ];
+  let ymax = 0;
+  series.forEach(s => { for (let i = 0; i <= X; i++) ymax = Math.max(ymax, s.data[i] || 0); });
+  ymax = niceMax(ymax);
+  const sx = i => ml + (W - ml - mr) * i / X;
+  const sy = v => mt + (H - mt - mb) * (1 - v / ymax);
+  let g = '';
+  for (let t = 0; t <= 4; t++) { const v = ymax * t / 4, y = sy(v); g += `<line class="gridl" x1="${ml}" x2="${W - mr}" y1="${y}" y2="${y}"/><text class="ax" x="${ml - 6}" y="${y + 4}" text-anchor="end">${compact(v)}</text>`; }
+  const step = X <= 12 ? 1 : X <= 30 ? 5 : 10;
+  for (let i = 0; i <= X; i += step) g += `<text class="ax" x="${sx(i)}" y="${H - 8}" text-anchor="middle">${i}</text>`;
+  series.forEach(s => {
+    let d = '';
+    for (let i = 0; i <= X; i++) d += (i ? 'L' : 'M') + sx(i).toFixed(1) + ' ' + sy(Math.max(0, s.data[i] || 0)).toFixed(1);
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''}/>`;
+  });
+  [[R.rent.runout, 'var(--rent)'], [R.buy.runout, 'var(--buy)']].forEach(([r, c]) => {
+    if (r !== null && r / 12 <= X) g += `<circle cx="${sx(r / 12)}" cy="${sy(0)}" r="4.5" fill="${c}" stroke="var(--surface)" stroke-width="2"/>`;
+  });
+  const box = document.getElementById('chartbox');
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spaargeld en vermogen per jaar voor huren en kopen">${g}<line id="cross" y1="${mt}" y2="${H - mb}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/></svg><div class="tip" id="tip" hidden></div><div class="ax" style="text-align:center;margin-top:2px">jaren vanaf de verkoop</div>`;
+  const svg = box.querySelector('svg'), cross = svg.querySelector('#cross'), tip = box.querySelector('#tip');
+  function move(ev) {
+    const rect = svg.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) / rect.width * W;
+    const i = Math.max(0, Math.min(X, Math.round((px - ml) / (W - ml - mr) * X)));
+    cross.setAttribute('x1', sx(i)); cross.setAttribute('x2', sx(i)); cross.setAttribute('visibility', 'visible');
+    tip.hidden = false;
+    tip.innerHTML = `<b>Na ${i} jaar</b>` + series.map(s => `<div><i style="background:${s.color}"></i>${s.name}: ${eur(s.data[i] || 0)}</div>`).join('');
+    const left = sx(i) / W * rect.width;
+    tip.style.left = Math.min(left + 12, rect.width - tip.offsetWidth - 4) + 'px';
+    tip.style.top = '8px';
+  }
+  svg.addEventListener('pointermove', move);
+  svg.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+  const yrs = [1, 5, 10, 20, 30].filter(y => y <= R.hz);
+  document.getElementById('yeartbl').innerHTML = `<table><thead><tr><th>Na</th>${yrs.map(y => `<th>${y} jr</th>`).join('')}</tr></thead><tbody>
+    <tr><td>Spaargeld, huren</td>${yrs.map(y => `<td>${eur(R.rent.liq[y] || 0)}</td>`).join('')}</tr>
+    <tr><td>Spaargeld, kopen</td>${yrs.map(y => `<td>${eur(R.buy.liq[y] || 0)}</td>`).join('')}</tr>
+    <tr><td>Vermogen kopen (incl. appartement)</td>${yrs.map(y => `<td>${eur(R.buy.wealth[y] || 0)}</td>`).join('')}</tr></tbody></table>`;
+}
+
+/* ---------- Start ---------- */
+load();
+renderInputs();
+renderResults();
+const inputsEl = document.getElementById('inputs');
+inputsEl.addEventListener('input', onFieldInput);
+inputsEl.addEventListener('change', e => { if (e.target.tagName === 'SELECT' || e.target.type === 'checkbox') onFieldInput(e); });
+inputsEl.addEventListener('click', e => {
+  const t = e.target;
+  if (t.id === 'addrow') { S.rows.push({ n: 'Nieuwe post', b: 0, p: 0, g: 0 }); reopen(); }
+  else if (t.dataset && t.dataset.del !== undefined) { S.rows.splice(+t.dataset.del, 1); reopen(); }
+  else if (t.id === 'io_copy') {
+    const ta = document.getElementById('io'), msg = document.getElementById('io_msg');
+    ta.value = JSON.stringify(S); ta.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(ta.value) : Promise.reject()).then(() => { msg.textContent = 'Gekopieerd.'; }, () => { msg.textContent = 'Selecteer de tekst en kopieer met Ctrl+C.'; });
+  } else if (t.id === 'io_load') {
+    const msg = document.getElementById('io_msg');
+    try { applyState(JSON.parse(document.getElementById('io').value)); save(); reopen(); document.getElementById('io_msg').textContent = 'Geladen.'; }
+    catch (err) { msg.textContent = 'Deze tekst kon niet gelezen worden.'; }
+  } else if (t.id === 'io_reset') { S = defaults(); save(); reopen(); }
+});
+function reopen() {
+  const open = [...document.querySelectorAll('details.sec')].map(d => d.open);
+  renderInputs();
+  document.querySelectorAll('details.sec').forEach((d, i) => { d.open = open[i]; });
+  update();
+}
+</script>
+
+</body></html>
